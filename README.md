@@ -25,14 +25,6 @@ A browser-based match video analyzer for FRC Team 6328 Mechanical Advantage. Log
 | `F` | Hold — log Feed |
 | `I` + `S` together | Shoot-on-Move cycle |
 
-## Hosting on GitHub Pages
-
-1. Create a new GitHub repo (e.g. `6328-match-analyzer`)
-2. Add `index.html` to the root of the repo
-3. Go to **Settings → Pages → Source → Deploy from branch → main / root**
-4. Your app will be live at `https://yourusername.github.io/6328-match-analyzer/`
-
-> **Note:** YouTube embedding requires the app to be served over HTTP/HTTPS. It works automatically on GitHub Pages. If you open the file locally (via `file://`), you can still use the **Upload Video** button with a local file.
 
 ## Google Sheets Setup
 
