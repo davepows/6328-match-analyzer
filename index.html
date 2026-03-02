@@ -65,14 +65,19 @@ main { display: flex; flex: 1; gap: 0; overflow: hidden; }
 .phase-section { display: none; }
 .phase-row { display: flex; align-items: center; gap: 10px; }
 .phase-badge { font-size: 12px; font-weight: 700; letter-spacing: 2px; padding: 5px 16px; border-radius: 20px; text-transform: uppercase; transition: all 0.3s; background: #333; color: #666; }
-.phase-badge.pre     { background: #333; color: #777; }
-.phase-badge.auto    { background: var(--auto-col); color: var(--navy-deep); }
-.phase-badge.teleop  { background: var(--teleop-col); color: white; }
-.phase-badge.over    { background: #333; color: #555; }
+.phase-badge.pre        { background: #333; color: #777; }
+.phase-badge.auto       { background: var(--auto-col); color: var(--navy-deep); }
+.phase-badge.transition { background: #7B1FA2; color: white; animation: transitionPulse 0.4s infinite alternate; }
+.phase-badge.teleop     { background: var(--teleop-col); color: white; }
+.phase-badge.endgame    { background: var(--red); color: white; animation: transitionPulse 0.6s infinite alternate; }
+.phase-badge.over       { background: #333; color: #555; }
+@keyframes transitionPulse { from { opacity: 0.7; } to { opacity: 1; } }
 .match-timer { font-size: 36px; font-weight: 900; font-variant-numeric: tabular-nums; color: var(--white); line-height: 1; }
-.match-timer.auto    { color: var(--auto-col); }
-.match-timer.teleop  { color: var(--white); }
-.match-timer.over    { color: #444; }
+.match-timer.auto        { color: var(--auto-col); }
+.match-timer.transition  { color: #CE93D8; }
+.match-timer.teleop      { color: var(--white); }
+.match-timer.endgame     { color: #EF9A9A; }
+.match-timer.over        { color: #444; }
 .phase-progress { flex: 1; height: 6px; background: var(--navy); border-radius: 3px; overflow: hidden; }
 .phase-progress-fill { height: 100%; border-radius: 3px; background: #333; transition: width 0.3s linear, background 0.3s; }
 
@@ -247,7 +252,7 @@ main { display: flex; flex: 1; gap: 0; overflow: hidden; }
       <div class="buttons-row">
         <button class="hold-btn btn-intake" id="btnIntake"
           onpointerdown="holdStart('intake', event)" onpointerup="holdEnd('intake', event)"
-          onpointerleave="holdEnd('intake', event)">
+          onpointercancel="holdEnd('intake', event)">
           <span class="key-hint">hold I</span>
           <span class="btn-icon">🪣</span>
           <span class="btn-label">INTAKE</span>
@@ -256,7 +261,7 @@ main { display: flex; flex: 1; gap: 0; overflow: hidden; }
         </button>
         <button class="hold-btn btn-score" id="btnScore"
           onpointerdown="holdStart('score', event)" onpointerup="holdEnd('score', event)"
-          onpointerleave="holdEnd('score', event)">
+          onpointercancel="holdEnd('score', event)">
           <span class="key-hint">hold S</span>
           <span class="btn-icon">🎯</span>
           <span class="btn-label">SCORE</span>
@@ -265,7 +270,7 @@ main { display: flex; flex: 1; gap: 0; overflow: hidden; }
         </button>
         <button class="hold-btn btn-feed" id="btnFeed"
           onpointerdown="holdStart('feed', event)" onpointerup="holdEnd('feed', event)"
-          onpointerleave="holdEnd('feed', event)">
+          onpointercancel="holdEnd('feed', event)">
           <span class="key-hint">hold F</span>
           <span class="btn-icon">🔄</span>
           <span class="btn-label">FEED</span>
@@ -281,9 +286,11 @@ main { display: flex; flex: 1; gap: 0; overflow: hidden; }
       <h4>Match Timeline</h4>
       <div class="timeline-bar" id="timelineBar">
         <div class="tl-auto-line" id="autoLine"></div>
+        <div class="tl-auto-line" id="teleopLine" style="background:#9C27B0;opacity:0.5;"></div>
+        <div class="tl-auto-line" id="endgameLine" style="background:#C62828;opacity:0.5;"></div>
       </div>
       <div class="timeline-bar-feed" id="timelineBarFeed"></div>
-      <div class="tl-labels"><span>0:00</span><span>AUTO|TELEOP</span><span>2:30</span></div>
+      <div class="tl-labels"><span>0:00</span><span>AUTO → WAIT → TELEOP</span><span>2:40</span></div>
       <div class="tl-legend">
         <div class="tl-legend-item"><div class="tl-legend-dot" style="background:#2E7D32"></div>Intake</div>
         <div class="tl-legend-item"><div class="tl-legend-dot" style="background:#1565C0"></div>Score</div>
@@ -418,8 +425,10 @@ var tickInterval = null;
 var sheetUrl = localStorage.getItem('sheetUrl') || '';
 var autoFuelForMatch = 0;
 
-const MATCH_DURATION = 150; // 2:30
-const AUTO_DURATION  = 20;  // first 20s is auto
+const MATCH_DURATION    = 160; // 2:40 per 2026 game manual
+const AUTO_DURATION     = 20;  // 20s autonomous
+const TELEOP_START      = 30;  // 10s transition shift, then teleop at 30s
+const ENDGAME_START     = 130; // end game = last 30s (at 2:10 remaining)
 
 // ── Video Loading ──────────────────────────────────────────────
 function getYtId(url) {
@@ -587,10 +596,9 @@ function onSliderSet(val) {
 
 function updateAutoLine() {
   if (matchStartVideoTime === null || videoDuration === 0) return;
-  var bar  = document.getElementById('timelineBar');
-  var line = document.getElementById('autoLine');
-  var pct  = (AUTO_DURATION / MATCH_DURATION) * 100;
-  line.style.left = pct + '%';
+  document.getElementById('autoLine').style.left    = (AUTO_DURATION   / MATCH_DURATION * 100) + '%';
+  document.getElementById('teleopLine').style.left  = (TELEOP_START    / MATCH_DURATION * 100) + '%';
+  document.getElementById('endgameLine').style.left = (ENDGAME_START   / MATCH_DURATION * 100) + '%';
 }
 
 // ── Timing ────────────────────────────────────────────────────
@@ -600,9 +608,11 @@ function getMatchTime() {
 }
 
 function getPhase(mt) {
-  if (mt === null || mt < 0) return 'pre';
-  if (mt <= AUTO_DURATION)   return 'auto';
-  if (mt > MATCH_DURATION)   return 'over';
+  if (mt === null || mt < 0)    return 'pre';
+  if (mt <= AUTO_DURATION)      return 'auto';
+  if (mt <= TELEOP_START)       return 'transition';
+  if (mt >= ENDGAME_START)      return 'endgame';
+  if (mt > MATCH_DURATION)      return 'over';
   return 'teleop';
 }
 
@@ -622,7 +632,7 @@ function updatePhaseDisplay(mt) {
 
   badge.className = 'phase-badge ' + phase;
 
-  var labels = { pre:'PRE', auto:'AUTO', teleop:'TELEOP', over:'DONE' };
+  var labels = { pre:'PRE', auto:'AUTO', transition:'WAIT', teleop:'TELEOP', endgame:'END GAME', over:'DONE' };
   badge.textContent = labels[phase] || phase.toUpperCase();
   timer.className = 'match-timer ' + phase;
 
@@ -637,13 +647,18 @@ function updatePhaseDisplay(mt) {
     timer.textContent = rem.toFixed(1) + 's';
     fill.style.width = (mt / AUTO_DURATION * 100) + '%';
     fill.style.background = 'var(--auto-col)';
-  } else if (phase === 'teleop') {
+  } else if (phase === 'transition') {
+    var transRem = TELEOP_START - mt;
+    timer.textContent = transRem.toFixed(1) + 's';
+    fill.style.width = '100%';
+    fill.style.background = '#7B1FA2';
+  } else if (phase === 'teleop' || phase === 'endgame') {
     var teleRem = MATCH_DURATION - mt;
     var m = Math.floor(teleRem / 60), s = Math.floor(teleRem % 60);
     timer.textContent = m + ':' + String(s).padStart(2,'0');
-    var prog = (mt - AUTO_DURATION) / (MATCH_DURATION - AUTO_DURATION);
+    var prog = (mt - TELEOP_START) / (MATCH_DURATION - TELEOP_START);
     fill.style.width = (prog * 100) + '%';
-    fill.style.background = 'var(--teleop-col)';
+    fill.style.background = phase === 'endgame' ? 'var(--red)' : 'var(--teleop-col)';
   } else if (phase === 'over') {
     timer.textContent = '0:00';
     fill.style.width = '100%'; fill.style.background = '#444';
@@ -670,10 +685,25 @@ function holdStart(type, ev) {
   var mt = getMatchTime();
   if (mt === null) return;
   if (activeHold[type]) return; // already holding
-  activeHold[type] = { startMatchTime: mt, phase: getPhase(mt) };
+  var pointerId = ev && ev.pointerId !== undefined ? ev.pointerId : null;
+  activeHold[type] = { startMatchTime: mt, phase: getPhase(mt), pointerId: pointerId };
   var btn = document.getElementById(btnIdMap[type]);
-  if (btn) { btn.classList.add('active'); btn.setPointerCapture && ev && btn.setPointerCapture(ev.pointerId); }
+  if (btn) {
+    btn.classList.add('active');
+    if (pointerId !== null && btn.setPointerCapture) {
+      try { btn.setPointerCapture(pointerId); } catch(e) {}
+    }
+  }
 }
+
+// Document-level fallback: end any hold if pointer released outside button
+document.addEventListener('pointerup', function(ev) {
+  ['intake','score','feed'].forEach(function(type) {
+    if (activeHold[type] && activeHold[type].pointerId === ev.pointerId) {
+      holdEnd(type, null);
+    }
+  });
+});
 
 function holdEnd(type, ev) {
   if (!activeHold[type]) return;
