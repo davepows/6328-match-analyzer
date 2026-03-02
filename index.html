@@ -155,6 +155,14 @@ main { display: flex; flex: 1; gap: 0; overflow: hidden; }
 .submit-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .open-sheet-btn { background: transparent; border: 1px solid var(--gold); color: var(--gold); border-radius: 8px; padding: 10px 16px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; flex-shrink: 0; }
 .open-sheet-btn:hover { background: var(--gold); color: var(--navy-deep); }
+.routine-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.routine-item { display: flex; gap: 6px; align-items: center; }
+.routine-item input { flex: 1; background: var(--navy-deep); border: 1px solid var(--navy); color: var(--offwhite); border-radius: 6px; padding: 6px 10px; font-family: inherit; font-size: 13px; }
+.routine-item input:focus { border-color: var(--gold); outline: none; }
+.routine-del-btn { background: none; border: 1px solid #444; color: #666; border-radius: 5px; width: 26px; height: 26px; cursor: pointer; font-size: 14px; line-height: 1; flex-shrink: 0; }
+.routine-del-btn:hover { border-color: #c00; color: #c00; }
+.routine-add-btn { background: none; border: 1px dashed var(--gold); color: var(--gold); border-radius: 6px; padding: 5px 12px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; margin-top: 4px; width: 100%; }
+.routine-add-btn:hover { background: rgba(255,193,7,0.08); }
 .submit-status { font-size: 13px; color: #aaa; }
 .submit-status.ok  { color: #4CAF50; }
 .submit-status.err { color: #EF5350; }
@@ -429,7 +437,12 @@ main { display: flex; flex: 1; gap: 0; overflow: hidden; }
     <p style="margin-top:4px;">Paste your spreadsheet URL so you can open it directly from the app.</p>
     <input type="text" id="sheetViewUrl" placeholder="https://docs.google.com/spreadsheets/d/…">
 
-    <h3>Step 5 — Fuel per match</h3>
+    <h3>Step 5 — Auto Names</h3>
+    <p style="margin-top:4px;">Edit or reorder the routine options shown in the dropdown.</p>
+    <div class="routine-list" id="routineList"></div>
+    <button class="routine-add-btn" onclick="addRoutineRow()">+ Add routine</button>
+
+    <h3>Step 6 — Fuel per match</h3>
     <p style="margin-top:4px;">Enter your auto fuel scored each match when submitting (or leave 0 and add it manually in the sheet).</p>
 
     <div class="modal-btns">
@@ -1049,11 +1062,55 @@ function newMatch() {
 function openSettings() {
   document.getElementById('sheetUrl').value     = localStorage.getItem('sheetUrl')     || '';
   document.getElementById('sheetViewUrl').value = localStorage.getItem('sheetViewUrl') || '';
+  populateRoutineEditor();
   document.getElementById('settingsModal').classList.add('open');
 }
 function closeSettings() {
   document.getElementById('settingsModal').classList.remove('open');
 }
+// ── Routine editor ───────────────────────────────────────────
+var defaultRoutines = [
+  "Lowe's (Outpost→Depot)", "Monopoly (Depot)", "Monopoly (Outpost)",
+  "Home Depot (Depot→Outpost)", "Timid", "Other"
+];
+
+function getRoutines() {
+  var stored = localStorage.getItem('routines');
+  return stored ? JSON.parse(stored) : defaultRoutines;
+}
+function saveRoutines() {
+  var inputs = document.querySelectorAll('#routineList .routine-item input');
+  var names = Array.from(inputs).map(function(i){ return i.value.trim(); }).filter(Boolean);
+  localStorage.setItem('routines', JSON.stringify(names));
+  rebuildRoutineSelect(names);
+}
+function rebuildRoutineSelect(names) {
+  var sel = document.getElementById('routineSelect');
+  var current = sel.value;
+  sel.innerHTML = '';
+  names.forEach(function(n) {
+    var opt = document.createElement('option');
+    opt.textContent = n;
+    sel.appendChild(opt);
+  });
+  // Restore selection if still valid
+  if (names.includes(current)) sel.value = current;
+}
+function addRoutineRow(val) {
+  val = val || '';
+  var list = document.getElementById('routineList');
+  var row = document.createElement('div');
+  row.className = 'routine-item';
+  row.innerHTML = '<input type="text" value="' + val.replace(/"/g,'&quot;') + '" placeholder="Routine name">' +
+    '<button class="routine-del-btn" onclick="this.parentElement.remove()" title="Remove">×</button>';
+  list.appendChild(row);
+}
+function populateRoutineEditor() {
+  var list = document.getElementById('routineList');
+  list.innerHTML = '';
+  getRoutines().forEach(addRoutineRow);
+}
+
 function saveSettings() {
   var url     = document.getElementById('sheetUrl').value.trim();
   var viewUrl = document.getElementById('sheetViewUrl').value.trim();
@@ -1062,6 +1119,7 @@ function saveSettings() {
   sheetUrl     = url;
   sheetViewUrl = viewUrl;
   updateSheetBtn();
+  saveRoutines();
   closeSettings();
 }
 function updateSheetBtn() {
@@ -1087,6 +1145,7 @@ document.getElementById('settingsModal').addEventListener('click', function(e) {
 if (sheetUrl) {
   document.getElementById('sheetUrl').value = sheetUrl;
 }
+rebuildRoutineSelect(getRoutines());
 updateSheetBtn();
 </script>
 </body>
