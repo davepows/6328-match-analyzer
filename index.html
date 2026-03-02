@@ -153,6 +153,8 @@ main { display: flex; flex: 1; gap: 0; overflow: hidden; }
 .fuel-input-wrap .fuel-title { font-size: 11px; font-weight: 700; color: var(--gold); white-space: nowrap; align-self: center; margin-right: 4px; }
 .submit-btn { background: var(--gold); color: var(--navy-deep); border: none; border-radius: 8px; padding: 10px 22px; font-size: 14px; font-weight: 800; cursor: pointer; font-family: inherit; flex-shrink: 0; }
 .submit-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.open-sheet-btn { background: transparent; border: 1px solid var(--gold); color: var(--gold); border-radius: 8px; padding: 10px 16px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; flex-shrink: 0; }
+.open-sheet-btn:hover { background: var(--gold); color: var(--navy-deep); }
 .submit-status { font-size: 13px; color: #aaa; }
 .submit-status.ok  { color: #4CAF50; }
 .submit-status.err { color: #EF5350; }
@@ -332,6 +334,7 @@ main { display: flex; flex: 1; gap: 0; overflow: hidden; }
       </div>
       <div class="notes-row">
         <button class="submit-btn" id="submitBtn" onclick="submitMatch()" disabled>Submit to Sheet →</button>
+        <button class="open-sheet-btn" id="openSheetBtn" onclick="openSheet()" title="Open Google Sheet" style="display:none">📊 View Sheet</button>
         <button class="new-match-btn" onclick="newMatch()">+ New Match</button>
         <span class="submit-status" id="submitStatus"></span>
       </div>
@@ -420,7 +423,11 @@ main { display: flex; flex: 1; gap: 0; overflow: hidden; }
     <h3>Step 3 — Paste URL below</h3>
     <input type="text" id="sheetUrl" placeholder="https://script.google.com/macros/s/…/exec">
 
-    <h3>Step 4 — Auto Fuel per match</h3>
+    <h3>Step 4 — Google Sheet link (optional)</h3>
+    <p style="margin-top:4px;">Paste your spreadsheet URL so you can open it directly from the app.</p>
+    <input type="text" id="sheetViewUrl" placeholder="https://docs.google.com/spreadsheets/d/…">
+
+    <h3>Step 5 — Fuel per match</h3>
     <p style="margin-top:4px;">Enter your auto fuel scored each match when submitting (or leave 0 and add it manually in the sheet).</p>
 
     <div class="modal-btns">
@@ -448,7 +455,8 @@ var videoDuration = 0;
 var events = []; // {type, phase, start, end, duration}
 var activeHold = {}; // {intake: {startMatchTime}, score: ..., feed: ...}
 var tickInterval = null;
-var sheetUrl = localStorage.getItem('sheetUrl') || '';
+var sheetUrl     = localStorage.getItem('sheetUrl')     || '';
+var sheetViewUrl = localStorage.getItem('sheetViewUrl') || '';
 var autoFuelForMatch = 0;
 
 const MATCH_DURATION    = 160; // 2:40 per 2026 game manual
@@ -1036,17 +1044,29 @@ function newMatch() {
 
 // ── Settings ─────────────────────────────────────────────────
 function openSettings() {
-  document.getElementById('sheetUrl').value = localStorage.getItem('sheetUrl') || '';
+  document.getElementById('sheetUrl').value     = localStorage.getItem('sheetUrl')     || '';
+  document.getElementById('sheetViewUrl').value = localStorage.getItem('sheetViewUrl') || '';
   document.getElementById('settingsModal').classList.add('open');
 }
 function closeSettings() {
   document.getElementById('settingsModal').classList.remove('open');
 }
 function saveSettings() {
-  var url = document.getElementById('sheetUrl').value.trim();
-  localStorage.setItem('sheetUrl', url);
-  sheetUrl = url;
+  var url     = document.getElementById('sheetUrl').value.trim();
+  var viewUrl = document.getElementById('sheetViewUrl').value.trim();
+  localStorage.setItem('sheetUrl',     url);
+  localStorage.setItem('sheetViewUrl', viewUrl);
+  sheetUrl     = url;
+  sheetViewUrl = viewUrl;
+  updateSheetBtn();
   closeSettings();
+}
+function updateSheetBtn() {
+  var btn = document.getElementById('openSheetBtn');
+  if (btn) btn.style.display = sheetViewUrl ? 'inline-flex' : 'none';
+}
+function openSheet() {
+  if (sheetViewUrl) window.open(sheetViewUrl, '_blank');
 }
 function copyScript() {
   var text = document.getElementById('scriptCode').textContent;
@@ -1064,6 +1084,7 @@ document.getElementById('settingsModal').addEventListener('click', function(e) {
 if (sheetUrl) {
   document.getElementById('sheetUrl').value = sheetUrl;
 }
+updateSheetBtn();
 </script>
 </body>
 </html>
