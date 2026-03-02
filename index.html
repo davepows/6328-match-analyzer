@@ -52,6 +52,11 @@ main { display: flex; flex: 1; gap: 0; overflow: hidden; }
 #localVideo { width: 100%; height: 100%; display: none; }
 #ytContainer { width: 100%; height: 100%; }
 #ytContainer iframe { width: 100%; height: 100%; border: none; }
+#ytOverlay {
+  display: none; /* shown only when YouTube is active */
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  z-index: 5; cursor: pointer; background: transparent;
+}
 
 /* MATCH START SLIDER */
 .slider-section { display: none; background: var(--navy-dark); border-radius: 8px; padding: 12px 14px; }
@@ -178,7 +183,7 @@ main { display: flex; flex: 1; gap: 0; overflow: hidden; }
 
 </style>
 </head>
-<body>
+<body tabindex="-1">
 
 <header>
   <div class="brand">
@@ -226,6 +231,9 @@ main { display: flex; flex: 1; gap: 0; overflow: hidden; }
     <div id="videoContainer">
       <video id="localVideo" controls preload="auto"></video>
       <div id="ytContainer"></div>
+      <!-- Transparent overlay prevents YouTube iframe from stealing keyboard focus.
+           Clicks are routed to ytPlayer.playVideo/pauseVideo so play/pause still works. -->
+      <div id="ytOverlay" onclick="toggleYtPlayPause()" title="Click to play/pause · Use I / S / F keys to log"></div>
     </div>
 
     <!-- MATCH START SLIDER -->
@@ -475,6 +483,8 @@ function loadYouTube() {
         onReady: function(e) {
           videoType = 'youtube';
           videoDuration = e.target.getDuration() || 150;
+          // Show overlay so YouTube iframe never steals keyboard focus
+          document.getElementById('ytOverlay').style.display = 'block';
           onVideoLoaded();
         },
         onError: function(e) {
@@ -504,6 +514,7 @@ function loadLocalVideo(ev) {
   vid.src = url;
   vid.style.display = 'block';
   document.getElementById('ytContainer').style.display = 'none';
+  document.getElementById('ytOverlay').style.display = 'none'; // not needed for local video
   document.getElementById('videoContainer').style.display = 'block';
 
   vid.onloadedmetadata = function() {
@@ -542,6 +553,18 @@ function getVideoTime() {
   if (videoType === 'manual')  return getManualTime();
   if (videoType === 'youtube' && ytPlayer && ytPlayer.getCurrentTime) return ytPlayer.getCurrentTime();
   return 0;
+}
+
+function toggleYtPlayPause() {
+  // Called by the YouTube overlay div (see #ytOverlay).
+  // Toggling play/pause here keeps keyboard focus in the parent document
+  // so I/S/F key shortcuts keep working while watching the video.
+  if (\!ytPlayer || \!ytPlayer.getPlayerState) return;
+  var state = ytPlayer.getPlayerState();
+  // YT.PlayerState.PLAYING = 1
+  if (state === 1) { ytPlayer.pauseVideo(); } else { ytPlayer.playVideo(); }
+  // Keep document focus so keyboard shortcuts work
+  document.body.focus();
 }
 
 function seekVideo(t) {
@@ -611,8 +634,8 @@ function getPhase(mt) {
   if (mt === null || mt < 0)    return 'pre';
   if (mt <= AUTO_DURATION)      return 'auto';
   if (mt <= TELEOP_START)       return 'transition';
+  if (mt > MATCH_DURATION)      return 'over';   // must come before endgame check
   if (mt >= ENDGAME_START)      return 'endgame';
-  if (mt > MATCH_DURATION)      return 'over';
   return 'teleop';
 }
 
@@ -694,6 +717,8 @@ function holdStart(type, ev) {
       try { btn.setPointerCapture(pointerId); } catch(e) {}
     }
   }
+  // Reclaim keyboard focus from any embedded iframe or video element
+  document.body.focus();
 }
 
 // Document-level fallback: end any hold if pointer released outside button
@@ -723,6 +748,7 @@ function holdEnd(type, ev) {
   activeHold[type] = null;
   var btn = document.getElementById(btnIdMap[type]);
   if (btn) btn.classList.remove('active');
+  document.body.focus();
 }
 
 // ── Keyboard ─────────────────────────────────────────────────
