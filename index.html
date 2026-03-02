@@ -140,7 +140,15 @@ main { display: flex; flex: 1; gap: 0; overflow: hidden; }
   width: 100%; background: var(--navy-deep); border: 1px solid var(--navy); color: var(--offwhite);
   border-radius: 6px; padding: 10px; font-family: inherit; font-size: 14px; resize: vertical; min-height: 70px;
 }
-.notes-row { display: flex; gap: 10px; margin-top: 10px; align-items: center; }
+.notes-row { display: flex; gap: 10px; margin-top: 10px; align-items: center; flex-wrap: wrap; }
+.fuel-input-wrap { display: flex; align-items: center; gap: 6px; background: var(--navy-deep); border: 1px solid var(--gold); border-radius: 8px; padding: 6px 12px; }
+.fuel-input-wrap label { font-size: 12px; font-weight: 700; color: var(--gold); white-space: nowrap; }
+.fuel-input-wrap input[type=number] {
+  width: 54px; background: transparent; border: none; border-bottom: 1px solid var(--gold);
+  color: var(--offwhite); font-size: 18px; font-weight: 800; text-align: center;
+  font-family: inherit; outline: none; padding: 2px 0;
+}
+.fuel-input-wrap .fuel-hint { font-size: 10px; color: #888; }
 .submit-btn { background: var(--gold); color: var(--navy-deep); border: none; border-radius: 8px; padding: 10px 22px; font-size: 14px; font-weight: 800; cursor: pointer; font-family: inherit; flex-shrink: 0; }
 .submit-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .submit-status { font-size: 13px; color: #aaa; }
@@ -308,6 +316,11 @@ main { display: flex; flex: 1; gap: 0; overflow: hidden; }
     <div class="notes-section" id="notesSection">
       <h4>Match Notes</h4>
       <textarea id="matchNotes" placeholder="Any issues, observations, or things to remember from this match…"></textarea>
+      <div class="fuel-input-wrap" title="Enter the total fuel scored this match (from the auto hub counter)">
+        <label>⛽ Fuel Scored</label>
+        <input type="number" id="fuelScored" min="0" value="0" onclick="this.select()">
+        <span class="fuel-hint">manual entry</span>
+      </div>
       <div class="notes-row">
         <button class="submit-btn" id="submitBtn" onclick="submitMatch()" disabled>Submit to Sheet →</button>
         <button class="new-match-btn" onclick="newMatch()">+ New Match</button>
@@ -937,7 +950,7 @@ function submitMatch() {
     return;
   }
 
-  var autoFuel = parseInt(prompt('Auto fuel scored this match? (enter 0 if unsure)', '0') || '0');
+  var autoFuel = parseInt(document.getElementById('fuelScored').value || '0', 10);
   var cycles    = computeCycles();
   var intakeEvs = events.filter(function(e){ return e.type==='intake'; });
   var scoreEvs  = events.filter(function(e){ return e.type==='score'; });
@@ -1002,6 +1015,7 @@ function newMatch() {
     var el = document.getElementById(id); if (el) el.style.display = 'none';
   });
   document.getElementById('matchNotes').value = '';
+  document.getElementById('fuelScored').value = '0';
   document.getElementById('submitStatus').textContent = '';
   renderTimeline(null);
   updateStats();
