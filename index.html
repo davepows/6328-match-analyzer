@@ -202,6 +202,8 @@ main { display: flex; flex: 1; gap: 0; overflow: hidden; }
     </div>
   </div>
   <div class="header-right">
+    <label>Event</label>
+    <input type="text" id="eventCode" placeholder="e.g. 2026wabon" style="width:110px;text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()">
     <label>Match #</label>
     <input type="number" id="matchNum" value="26" min="1" style="width:60px">
     <label>Routine</label>
@@ -378,12 +380,12 @@ main { display: flex; flex: 1; gap: 0; overflow: hidden; }
     var summary = ss.getSheetByName("Match Summary");
     if (!summary) {
       summary = ss.insertSheet("Match Summary");
-      summary.appendRow(["Match #","Date","Routine","Auto Fuel","Teleop Fuel","Total Fuel","Total Cycles","SOM Cycles",
+      summary.appendRow(["Match #","Event","Date","Routine","Auto Fuel","Teleop Fuel","Total Fuel","Total Cycles","SOM Cycles",
         "Avg Cycle (s)","Best Cycle (s)","Avg Transit (s)","Total Intake (s)",
         "Total Score (s)","Total Feed (s)","Total Transit (s)","Notes"]);
     }
     summary.appendRow([
-      data.matchNum, data.date, data.routine,
+      data.matchNum, data.eventCode||"", data.date, data.routine,
       data.autoFuel, data.teleopFuel||0, data.totalFuel||0, data.cycles, data.somCycles||0,
       data.avgCycle, data.bestCycle, data.avgTransit,
       data.totalIntake, data.totalScore, data.totalFeed||0, data.totalTransit, data.notes
@@ -987,6 +989,7 @@ function submitMatch() {
 
   var payload = {
     matchNum:      parseInt(document.getElementById('matchNum').value),
+    eventCode:     document.getElementById('eventCode').value.trim(),
     date:          new Date().toISOString().split('T')[0],
     routine:       document.getElementById('routineSelect').value,
     autoFuel:      autoFuel,
