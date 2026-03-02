@@ -219,7 +219,7 @@ main { display: flex; flex: 1; gap: 0; overflow: hidden; }
 
     <!-- VIDEO PLAYER -->
     <div id="videoContainer">
-      <video id="localVideo" controls></video>
+      <video id="localVideo" controls preload="auto"></video>
       <div id="ytContainer"></div>
     </div>
 
@@ -536,8 +536,14 @@ function getVideoTime() {
 }
 
 function seekVideo(t) {
-  if (videoType === 'local') document.getElementById('localVideo').currentTime = t;
-  // manual and youtube side-by-side: can't seek programmatically
+  if (videoType === 'local') {
+    var vid = document.getElementById('localVideo');
+    vid.pause();
+    vid.currentTime = parseFloat(t);
+  } else if (videoType === 'youtube' && ytPlayer && ytPlayer.seekTo) {
+    ytPlayer.seekTo(parseFloat(t), true);
+    ytPlayer.pauseVideo();
+  }
 }
 
 function onVideoLoaded() {
