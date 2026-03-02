@@ -141,14 +141,16 @@ main { display: flex; flex: 1; gap: 0; overflow: hidden; }
   border-radius: 6px; padding: 10px; font-family: inherit; font-size: 14px; resize: vertical; min-height: 70px;
 }
 .notes-row { display: flex; gap: 10px; margin-top: 10px; align-items: center; flex-wrap: wrap; }
-.fuel-input-wrap { display: flex; align-items: center; gap: 6px; background: var(--navy-deep); border: 1px solid var(--gold); border-radius: 8px; padding: 6px 12px; }
-.fuel-input-wrap label { font-size: 12px; font-weight: 700; color: var(--gold); white-space: nowrap; }
+.fuel-input-wrap { display: flex; align-items: center; gap: 12px; background: var(--navy-deep); border: 1px solid var(--gold); border-radius: 8px; padding: 8px 14px; }
+.fuel-input-wrap .fuel-section { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.fuel-input-wrap .fuel-section label { font-size: 10px; font-weight: 700; color: var(--gold); white-space: nowrap; text-transform: uppercase; letter-spacing: 0.8px; }
 .fuel-input-wrap input[type=number] {
   width: 54px; background: transparent; border: none; border-bottom: 1px solid var(--gold);
-  color: var(--offwhite); font-size: 18px; font-weight: 800; text-align: center;
+  color: var(--offwhite); font-size: 22px; font-weight: 800; text-align: center;
   font-family: inherit; outline: none; padding: 2px 0;
 }
-.fuel-input-wrap .fuel-hint { font-size: 10px; color: #888; }
+.fuel-input-wrap .fuel-divider { width: 1px; height: 36px; background: #333; }
+.fuel-input-wrap .fuel-title { font-size: 11px; font-weight: 700; color: var(--gold); white-space: nowrap; align-self: center; margin-right: 4px; }
 .submit-btn { background: var(--gold); color: var(--navy-deep); border: none; border-radius: 8px; padding: 10px 22px; font-size: 14px; font-weight: 800; cursor: pointer; font-family: inherit; flex-shrink: 0; }
 .submit-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .submit-status { font-size: 13px; color: #aaa; }
@@ -316,10 +318,17 @@ main { display: flex; flex: 1; gap: 0; overflow: hidden; }
     <div class="notes-section" id="notesSection">
       <h4>Match Notes</h4>
       <textarea id="matchNotes" placeholder="Any issues, observations, or things to remember from this match…"></textarea>
-      <div class="fuel-input-wrap" title="Enter the total fuel scored this match (from the auto hub counter)">
-        <label>⛽ Fuel Scored</label>
-        <input type="number" id="fuelScored" min="0" value="0" onclick="this.select()">
-        <span class="fuel-hint">manual entry</span>
+      <div class="fuel-input-wrap" title="Enter fuel scored in Auto and Teleop separately">
+        <span class="fuel-title">⛽ Fuel</span>
+        <div class="fuel-section">
+          <label>Auto</label>
+          <input type="number" id="fuelAuto" min="0" value="0" onclick="this.select()">
+        </div>
+        <div class="fuel-divider"></div>
+        <div class="fuel-section">
+          <label>Teleop</label>
+          <input type="number" id="fuelTeleop" min="0" value="0" onclick="this.select()">
+        </div>
       </div>
       <div class="notes-row">
         <button class="submit-btn" id="submitBtn" onclick="submitMatch()" disabled>Submit to Sheet →</button>
@@ -366,13 +375,13 @@ main { display: flex; flex: 1; gap: 0; overflow: hidden; }
     var summary = ss.getSheetByName("Match Summary");
     if (!summary) {
       summary = ss.insertSheet("Match Summary");
-      summary.appendRow(["Match #","Date","Routine","Auto Fuel","Total Cycles","SOM Cycles",
+      summary.appendRow(["Match #","Date","Routine","Auto Fuel","Teleop Fuel","Total Fuel","Total Cycles","SOM Cycles",
         "Avg Cycle (s)","Best Cycle (s)","Avg Transit (s)","Total Intake (s)",
         "Total Score (s)","Total Feed (s)","Total Transit (s)","Notes"]);
     }
     summary.appendRow([
       data.matchNum, data.date, data.routine,
-      data.autoFuel, data.cycles, data.somCycles||0,
+      data.autoFuel, data.teleopFuel||0, data.totalFuel||0, data.cycles, data.somCycles||0,
       data.avgCycle, data.bestCycle, data.avgTransit,
       data.totalIntake, data.totalScore, data.totalFeed||0, data.totalTransit, data.notes
     ]);
@@ -950,7 +959,8 @@ function submitMatch() {
     return;
   }
 
-  var autoFuel = parseInt(document.getElementById('fuelScored').value || '0', 10);
+  var autoFuel   = parseInt(document.getElementById('fuelAuto').value   || '0', 10);
+  var teleopFuel  = parseInt(document.getElementById('fuelTeleop').value || '0', 10);
   var cycles    = computeCycles();
   var intakeEvs = events.filter(function(e){ return e.type==='intake'; });
   var scoreEvs  = events.filter(function(e){ return e.type==='score'; });
@@ -972,6 +982,8 @@ function submitMatch() {
     date:          new Date().toISOString().split('T')[0],
     routine:       document.getElementById('routineSelect').value,
     autoFuel:      autoFuel,
+    teleopFuel:    teleopFuel,
+    totalFuel:     autoFuel + teleopFuel,
     cycles:        cycles.length,
     somCycles:     somCycles,
     avgCycle:      parseFloat(avgCycle.toFixed(2)),
@@ -1015,7 +1027,8 @@ function newMatch() {
     var el = document.getElementById(id); if (el) el.style.display = 'none';
   });
   document.getElementById('matchNotes').value = '';
-  document.getElementById('fuelScored').value = '0';
+  document.getElementById('fuelAuto').value   = '0';
+  document.getElementById('fuelTeleop').value = '0';
   document.getElementById('submitStatus').textContent = '';
   renderTimeline(null);
   updateStats();
